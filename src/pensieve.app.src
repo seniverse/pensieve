@@ -1,0 +1,12 @@
+{application, pensieve,
+ [
+  {description, "event store"},
+  {vsn, "git"},
+  {mod, {pensieve_app, []}},
+  {registered, [pensieve_sup]},
+  {applications, [crypto]},
+  {env,[]},
+  {licenses, ["Apache"]},
+  {links,[{"GitHub","https://github.com/seniverse/pensieve"}]}
+ ]
+}.
