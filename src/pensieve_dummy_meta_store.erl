@@ -36,7 +36,6 @@ init([]) ->
 handle_call(load, _From, State) ->
     {reply, State, State};
 handle_call({store, {Seq, _} = Id}, _From, {Seq0, _}) when is_integer(Seq), Seq > Seq0 ->
-    gen_event:notify(pensieve_event, Id),
     {reply, ok, Id};
 handle_call({store, _}, _From, State) ->
     {reply, {error, State}, State};

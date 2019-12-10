@@ -23,7 +23,7 @@ init([]) ->
         intensity => 1,
         period => 5},
       [#{id => pensieve_event,
-         start => {gen_event, start_link, [{local, pensieve_event}]},
+         start => {pensieve_event, start_link, []},
          restart => permanent,
          shutdown => 5000,
          type => worker,

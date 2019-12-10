@@ -19,10 +19,11 @@ init([]) ->
 
     Id = pensieve:latest(),
     Chunk = pensieve:get(Id),
-    Indices = pensieve_chunk:next_indices(Id, Chunk),
+    gen_event:notify(pensieve_event, Id),
+    Index = pensieve_chunk:next_index(Id, Chunk),
 
     {ok,
-     #{indices => Indices,
+     #{index => Index,
        queue => queue:new(),
        waitings => [],
        delay => Delay}
@@ -31,8 +32,9 @@ init([]) ->
 handle_call({append, Data}, From, State = #{queue := Queue}) ->
     {noreply, start_timer(State#{queue := queue:in({From, Data}, Queue)})};
 handle_call({put, Id, Chunk}, _From, State = #{queue := Queue, waitings := Waitings}) ->
-    State1 = (maps:remove(worker, State))#{indices := pensieve_chunk:next_indices(Id, Chunk), waitings := []},
+    State1 = (maps:remove(worker, State))#{index := pensieve_chunk:next_index(Id, Chunk), waitings := []},
     [gen_server:reply(From, ok) || {From, _} <- Waitings],
+    gen_event:notify(pensieve_event, Id),
     {reply,
      ok,
      case State of
@@ -72,17 +74,17 @@ start_timer(State = #{delay := Delay}) ->
 
 start_worker(State = #{worker := _}) ->
     State#{timer => timeout};
-start_worker(State = #{waitings := Waitings, queue := Queue, indices := Indices}) ->
+start_worker(State = #{waitings := Waitings, queue := Queue, index := Index}) ->
     Waitings1 = Waitings ++ queue:to_list(Queue),
-    Data = [D || {_, D} <- Waitings1],
+    Data = [Item || {_, D} <- Waitings1, Item <- D],
     Self = self(),
 
     Pid =
         spawn_link(
           fun() ->
-                  {Id, Chunk} = pensieve_chunk:encode([Indices|Data]),
+                  {Id, Chunk} = pensieve_chunk:encode([Index|Data]),
                   pensieve:put(Id, Chunk),
-                  ok = gen_server:call(Self, {put, Id, [Indices|Data]})
+                  ok = gen_server:call(Self, {put, Id, [Index|Data]})
           end),
 
     (maps:remove(timer, State))
